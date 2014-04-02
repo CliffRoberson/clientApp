@@ -23,6 +23,9 @@ import android.widget.Toast;
 import android.view.View.OnClickListener;
 
 public class MainActivity extends Activity {
+	ProcessingWorkerThread pt;
+	ListenerWorkerThread lt;
+	
 	int[][] board = new int[3][3];
 	int ID = -1;
 	int MAX_PACKET_SIZE= 512;
@@ -319,8 +322,10 @@ public class MainActivity extends Activity {
 			}
 		});
 		
-		new ListenerWorkerThread().start();
-		new ProcessingWorkerThread().start();
+		lt = new ListenerWorkerThread();
+		pt = new ProcessingWorkerThread();
+		lt.start();
+		pt.start();
 		
 	
 	}
@@ -329,9 +334,16 @@ public class MainActivity extends Activity {
 	
 	private class ProcessingWorkerThread extends Thread{
 
+		boolean pThreadRun;
+		
+		public void close(){
+			pThreadRun = false;
+		}
+		
 		@Override
 		public void run() {
-			while (true){
+			pThreadRun = true;
+			while (pThreadRun){
 				if (!boardReady){
 					if (!myTurn){
 						runOnUiThread(new Runnable(){
@@ -910,12 +922,14 @@ public class MainActivity extends Activity {
 	
 	private class ListenerWorkerThread extends Thread {
 
+		boolean lThreadRun;
 		@Override
 		public void run() {
 			byte[] buf = new byte[MAX_PACKET_SIZE];
 			
 	        DatagramPacket rxPacket = new DatagramPacket(buf, buf.length);
-			while(true){
+	        lThreadRun = true;
+			while(lThreadRun){
 				
 				try {
 					socket.receive(rxPacket);
@@ -931,6 +945,9 @@ public class MainActivity extends Activity {
 				
 			}
 		}
+		public void close(){
+			lThreadRun = false;
+		}
 
 		
 	}
@@ -941,5 +958,13 @@ public class MainActivity extends Activity {
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		lt.close();
+		pt.close();
+	}
+	
+	
 
 }
